@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ARGON ERP — Hệ Thống Báo Giá & Xuất Kho</title>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.2.96/css/materialdesignicons.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+  <?!= include('UI_Styles'); ?>
+</head>
+<body>
+
+  <!-- THANH ĐIỀU HƯỚNG NGANG KAPELLA -->
+  <div class="kapella-top-nav">
+    <div class="kapella-brand">
+      <i class="mdi mdi-cube-send" style="font-size:22px;"></i>
+      <span>GOODS LINK ERP — KAPELLA STUDIO v5.0</span>
+    </div>
+    <div class="kapella-nav-tabs">
+      <button class="kapella-tab-btn" id="tabBtnDash" onclick="chuyenManHinhKapella('DASH')">
+        <i class="mdi mdi-view-dashboard-outline"></i> 📊 Tổng Quan (Dashboard)
+      </button>
+      <button class="kapella-tab-btn active" id="tabBtnStudio" onclick="chuyenManHinhKapella('STUDIO')">
+        <i class="mdi mdi-file-document-edit-outline"></i> ⚡ Soạn Báo Giá / PI (Studio)
+      </button>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <button onclick="taoDonMoi(); chuyenManHinhKapella('STUDIO');" style="background:#0ddbb9;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">
+        + Tạo Đơn Mới
+      </button>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MÀN HÌNH 1: KAPELLA DASHBOARD (THỐNG KÊ & QUẢN TRỊ ĐƠN) -->
+  <!-- ========================================================= -->
+  <div id="viewDashboard">
+    <div class="kp-welcome-banner">
+      <div>
+        <h3 style="margin:0 0 4px 0;font-size:18px;font-weight:800;">Bảng Điều Khiển Quản Trị Báo Giá & Ngoại Thương</h3>
+        <div style="font-size:12px;opacity:0.9;">Dữ liệu đồng bộ thời gian thực từ Google Sheets (Cloud Orders, CRM, Database & DM_Bank)</div>
+      </div>
+      <button onclick="taiDanhSachDonLuuApp()" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.4);padding:7px 14px;border-radius:6px;cursor:pointer;font-weight:700;font-size:12px;">
+        🔄 Làm mới dữ liệu
+      </button>
+    </div>
+
+    <!-- 4 THẺ KPI KAPELLA -->
+    <div class="kp-grid-4">
+      <div class="kp-card">
+        <div class="kp-stat-title">☁️ Tổng Đơn Lưu Cloud</div>
+        <div class="kp-stat-val" id="kpTotalOrders">0</div>
+        <div class="kp-progress"><div class="kp-progress-bar" style="width:100%;background:#464dee;"></div></div>
+      </div>
+      <div class="kp-card">
+        <div class="kp-stat-title">🌐 Báo Giá Quốc Tế (Quote / PI)</div>
+        <div class="kp-stat-val" id="kpCountEN" style="color:#0ddbb9;">0</div>
+        <div class="kp-progress"><div class="kp-progress-bar" id="kpBarEN" style="width:50%;background:#0ddbb9;"></div></div>
+      </div>
+      <div class="kp-card">
+        <div class="kp-stat-title">🇻🇳 Báo Giá Nội Địa & Xuất Kho</div>
+        <div class="kp-stat-val" id="kpCountVN" style="color:#f6881f;">0</div>
+        <div class="kp-progress"><div class="kp-progress-bar" id="kpBarVN" style="width:50%;background:#f6881f;"></div></div>
+      </div>
+      <div class="kp-card">
+        <div class="kp-stat-title">📦 Danh Mục SP & Khách Hàng</div>
+        <div class="kp-stat-val" id="kpCountMaster" style="color:#ee5b5b;">0 SP / 0 KH</div>
+        <div class="kp-progress"><div class="kp-progress-bar" style="width:85%;background:#ee5b5b;"></div></div>
+      </div>
+    </div>
+
+    <!-- BẢNG ĐƠN HÀNG GẦN ĐÂY & BIỂU ĐỒ KAPELLA -->
+    <div class="kp-main-grid">
+      <div class="kp-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <div style="font-weight:800;font-size:14px;color:#001737;">📋 Danh Sách Đơn Hàng Cloud Gần Đây</div>
+          <input type="text" id="kpSearchOrder" placeholder="🔍 Tìm mã đơn hoặc tên khách..." oninput="renderKapellaDashboard()" style="width:220px;padding:5px 10px;font-size:12px;">
+        </div>
+        <div style="max-height:360px;overflow-y:auto;">
+          <table class="kp-table">
+            <thead>
+              <tr>
+                <th>Mã chứng từ</th>
+                <th>Phân loại</th>
+                <th>Khách hàng / Đối tác</th>
+                <th>Ngày lập</th>
+                <th style="text-align:right;">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="kpRecentOrdersBody">
+              <tr><td colspan="5" style="text-align:center;color:#94a3b8;">Đang tải dữ liệu...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="kp-card">
+        <div style="font-weight:800;font-size:14px;color:#001737;margin-bottom:12px;">📈 Tỷ Trọng Chứng Từ</div>
+        <div style="height:240px;display:flex;align-items:center;justify-content:center;">
+          <canvas id="kpOrderChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MÀN HÌNH 2: STUDIO SOẠN BÁO GIÁ & XEM TRƯỚC A4 (2 CỘT)    -->
+  <!-- ========================================================= -->
+  <div class="app-workspace" id="viewStudio">
+
+    <!-- CỘT TRÁI: FORM NHẬP LIỆU -->
+    <div class="panel-left">
+      <div class="argon-hero-header">
+        <div class="brand-bar">
+          <h2 class="brand-title">⚡ ARGON STUDIO <span class="badge-argon">MODULAR v5.0</span></h2>
+          <button onclick="taoDonMoi()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">+ Đơn mới</button>
+        </div>
+        <div class="mode-switch">
+          <button class="mode-btn active" id="btnBG_VN" onclick="doiCheDo('BG_VN')">🇻🇳 Báo Giá (VN)</button>
+          <button class="mode-btn" id="btnBG_EN" onclick="doiCheDo('BG_EN')">🌐 Quote / PI (EN)</button>
+          <button class="mode-btn" id="btnXK" onclick="doiCheDo('XK')">📦 Xuất Kho</button>
+        </div>
+      </div>
+
+      <div class="panel-scroll-body">
+        <!-- KHO CLOUD -->
+        <div class="argon-card">
+          <div class="argon-card-header"><div class="argon-card-title" style="color:var(--argon-primary);">☁️ Kho Đơn Hàng Lưu (Cloud)</div></div>
+          <div class="form-group"><select id="savedOrdersSelect"><option value="">-- Đang tải... --</option></select></div>
+          <div class="row">
+            <button class="btn-argon btn-primary-argon" onclick="taiDonTuApp()">📂 Mở đơn</button>
+            <button class="btn-argon btn-danger-argon" onclick="xoaDonTrongApp()" style="width:90px;">🗑️ Xóa</button>
+          </div>
+        </div>
+
+        <!-- 1. KHÁCH HÀNG & CHỨNG TỪ -->
+        <div class="argon-card">
+          <div class="argon-card-header">
+            <div class="argon-card-title">👤 1. Thông Tin Khách Hàng & Đơn</div>
+            <button class="btn-mini-save" onclick="luuKhachHangMoi()">➕ Lưu KH vào Sheet</button>
+          </div>
+
+          <div id="divTitleENSelect" style="display:none;">
+            <div class="pi-switch-banner">
+              <div>
+                <div style="font-size:12px;font-weight:800;color:#d9460f;">⚡ Chế độ Proforma Invoice (PI)</div>
+                <div style="font-size:10.5px;color:#64748b;">Mở cột Amount, đọc số & Bank T/T</div>
+              </div>
+              <input type="checkbox" id="chkIsPI" onchange="batTatCheDoPI()" style="width:18px;height:18px;cursor:pointer;">
+            </div>
+            <div class="form-group" id="divQuoteTitleDropdown">
+              <label>Tiêu đề báo giá tiếng Anh</label>
+              <select id="inTitleEN" onchange="updatePreview()">
+                <option value="COCONUT QUOTATION">COCONUT QUOTATION</option>
+                <option value="QUOTATION">QUOTATION</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group"><select id="khSelect" onchange="chonKhachHangCRM()"><option value="">-- Chọn khách hàng lưu sẵn --</option></select></div>
+          <div class="form-group"><label id="lblTenKhachInput">Tên khách hàng / Đối tác</label><input type="text" id="inKhach" placeholder="Nhập tên công ty / đối tác..." oninput="updatePreview()"></div>
+          <div class="form-group"><label id="lblLienHeInput">Người liên hệ / Phone / Attn</label><input type="text" id="inLienHe" placeholder="SĐT, Email, Người nhận..." oninput="updatePreview()"></div>
+
+          <div id="rowXkExtraFields" style="display:none;">
+            <div class="row">
+              <div class="form-group col"><label>Địa điểm xuất kho</label><input type="text" id="inDiaDiemXK" oninput="updatePreview()"></div>
+              <div class="form-group col"><label>Biển số xe</label><input type="text" id="inBienSoXe" oninput="updatePreview()"></div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="form-group col"><label id="lblMaInput">Số chứng từ</label><input type="text" id="inMa" value="QUO-2026-001" oninput="updatePreview()"></div>
+            <div class="form-group col"><label id="lblNgayInput">Ngày lập</label><input type="text" id="inNgay" oninput="updatePreview()"></div>
+          </div>
+
+          <div class="row" id="rowEnExtra" style="display:none;">
+            <div class="form-group col"><label>Prepared by</label><input type="text" id="inPreparedBy" oninput="updatePreview()"></div>
+            <div class="form-group col"><label>Valid until</label><input type="text" id="inValidUntil" oninput="updatePreview()"></div>
+          </div>
+
+          <!-- BỘ CHỌN INCOTERMS & LOGISTICS THÔNG MINH -->
+          <div id="divIncotermBuilder" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;padding:8px;border-radius:6px;margin-bottom:10px;">
+            <label style="color:#15803d;font-weight:800;font-size:11px;margin-bottom:6px;display:block;">🚢 Tạo nhanh Incoterms & Logistics</label>
+            <div class="row" style="gap:6px;margin-bottom:6px;">
+              <select id="selIncoterm" style="width:32%;font-size:11px;padding:4px;"><option value="EXW">EXW</option><option value="FOB">FOB</option><option value="CNF">CFR</option><option value="CIF">CIF</option><option value="DDP">DDP</option></select>
+              <input type="text" id="inPortName" placeholder="Cảng (VD: SHANGHAI)" style="width:68%;font-size:11px;padding:4px 6px;">
+            </div>
+            <div class="row" style="gap:6px;">
+              <input type="text" id="inLeadTime" placeholder="Lead time (VD: 7 days)" style="width:72%;font-size:11px;padding:4px 6px;">
+              <button type="button" onclick="chenIncotermThongMinh()" style="width:28%;background:#16a34a;color:#fff;border:none;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;">+ Chèn</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Ghi chú & Điều khoản</label>
+            <div class="preset-bar">
+              <span class="preset-chip" onclick="chenMauNhanh('inDieuKhoan', 'The above rates are CNF SHANGHAI')">+ CNF SHANGHAI</span>
+              <span class="preset-chip" onclick="chenMauNhanh('inDieuKhoan', 'The above rates are FOB HO CHI MINH CITY')">+ FOB HCMC</span>
+              <span class="preset-chip" onclick="chenMauNhanh('inDieuKhoan', 'Giao hàng trong vòng 3 ngày.')">+ Giao nhanh</span>
+            </div>
+            <textarea id="inDieuKhoan" rows="2" placeholder="Nhập ghi chú hoặc điều khoản..." oninput="updatePreview()"></textarea>
+          </div>
+
+          <div class="form-group" id="divEnNoteGroup" style="display:none;">
+            <label style="color:var(--argon-primary);">🌐 Câu Note Liên Hệ (PDF Tiếng Anh)</label>
+            <textarea id="inEnNote" rows="2" placeholder="Please contact us via information..." oninput="updatePreview()"></textarea>
+          </div>
+
+          <!-- PHƯƠNG THỨC THANH TOÁN (VN & EN) -->
+          <div class="form-group" id="divPaymentTermInput">
+            <label id="lblPaymentTermInput">Phương thức thanh toán</label>
+            <div class="preset-bar">
+              <span class="preset-chip" onclick="chenMauNhanh('inPaymentTerm', 'Thanh toán 100% bằng chuyển khoản hoặc tiền mặt ngay khi nhận hàng.', true)">+ TT 100% (VN)</span>
+              <span class="preset-chip" onclick="chenMauNhanh('inPaymentTerm', 'Đặt cọc 50% ngay sau khi xác nhận đơn hàng, 50% còn lại thanh toán trước khi giao hàng.', true)">+ Cọc 50-50 (VN)</span>
+              <span class="preset-chip" onclick="chenMauNhanh('inPaymentTerm', 'The buyer shall deposit 30% of the total contract value upon signing the contract. The remaining 70% shall be paid within 3 days upon receipt of the copy documents via email.', true)">+ Cọc 30-70 (EN)</span>
+            </div>
+            <textarea id="inPaymentTerm" rows="2" placeholder="Nhập điều khoản / phương thức thanh toán..." oninput="updatePreview()"></textarea>
+          </div>
+
+          <!-- NGÂN HÀNG T/T CHỌN TỪ SHEET -->
+          <div class="form-group" id="divBankInfoInput" style="display:none;">
+            <label style="color:var(--argon-primary);">🏦 Thông tin Ngân hàng Quốc tế (PI)</label>
+            <select id="bankSelect" onchange="chonBankTuSheet()" style="margin-bottom:6px;"><option value="">-- Chọn Bank từ Sheet --</option></select>
+            <textarea id="inBankInfo" rows="3" placeholder="Chọn ngân hàng ở trên hoặc tự nhập..." oninput="updatePreview()"></textarea>
+          </div>
+        </div>
+
+        <!-- 2. HÀNG HÓA -->
+        <div class="argon-card">
+          <div class="argon-card-header">
+            <div class="argon-card-title">📦 2. Chi Tiết Hàng Hóa</div>
+            <button class="btn-mini-save" onclick="luuSanPhamMoi()">➕ Lưu SP vào Database</button>
+          </div>
+
+          <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:10px;background:#f8fafc;padding:8px;border-radius:6px;">
+            <label id="lblToggleTotal" style="display:flex;align-items:center;gap:4px;margin:0;font-size:11px;color:#059669;cursor:pointer;"><input type="checkbox" id="chkShowTotal" checked onchange="renderTable()"> Hiện Tổng cộng</label>
+            <label id="lblToggleWords" style="display:flex;align-items:center;gap:4px;margin:0;font-size:11px;color:#d9460f;cursor:pointer;"><input type="checkbox" id="chkShowWords" checked onchange="renderTable()"> Đọc số thành chữ</label>
+            <label style="display:flex;align-items:center;gap:4px;margin:0;font-size:11px;color:var(--argon-primary);cursor:pointer;"><input type="checkbox" id="chkShowImage" checked onchange="renderTable()"> Hiện cột Ảnh</label>
+          </div>
+
+          <div class="row" id="rowEnOptions" style="display:none;margin-bottom:10px;">
+            <div class="form-group col">
+              <label>Loại Volume</label>
+              <select id="inVolumeType" onchange="renderTable()"><option value="(CTNS/40RF)">(CTNS/40RF)</option><option value="(CTNS/20RF)">(CTNS/20RF)</option></select>
+            </div>
+            <div class="form-group col">
+              <label>Tiền tệ</label>
+              <select id="inCurrency" onchange="renderTable()">
+                <option value="USD">USD ($)</option><option value="EUR">EUR (€)</option><option value="GBP">GBP (£)</option><option value="CNY">CNY (¥)</option><option value="VND">VNĐ</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group"><select id="spSelect" onchange="chonSPDatabase()"></select></div>
+          <div class="form-group"><label>Tên / Mô tả quy cách</label><textarea id="inTenSP" rows="2"></textarea></div>
+
+          <div class="row">
+            <div class="form-group col"><label>Mã SP</label><input type="text" id="inMaSPMoi" placeholder="Tự động"></div>
+            <div class="form-group col"><label>ĐVT</label><input type="text" id="inDVT" value="Trái" oninput="renderTable()"></div>
+            <div class="form-group col"><label>Số lượng</label><input type="number" id="inSL" value="1" min="0" step="any"></div>
+          </div>
+
+          <div class="row" id="rowPriceAndVat">
+            <div class="form-group col" id="divGiaGroup"><label>Đơn giá</label><input type="number" id="inGia" value="0" step="any"></div>
+            <div class="form-group col" id="divVATGroup">
+              <label>Thuế VAT</label>
+              <select id="inVAT"><option value="8" selected>8%</option><option value="10">10%</option><option value="5">5%</option><option value="0">0%</option><option value="KKKNT">KKKNT</option></select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Ảnh sản phẩm (HD)</label>
+            <input type="file" id="inSpFile" accept="image/png, image/jpeg" onchange="loadSpImage(this)">
+            <img id="spPreviewLeft" style="max-height:48px;margin-top:6px;display:none;border-radius:6px;">
+          </div>
+
+          <button class="btn-argon btn-primary-argon" onclick="themVaoGio()">+ Thêm Sản Phẩm Vào Đơn</button>
+
+          <div style="margin-top:12px;max-height:160px;overflow-y:auto;">
+            <table class="cart-mini-table">
+              <thead><tr><th>Sản phẩm</th><th width="50">SL</th><th width="50">VAT</th><th width="95">Thao tác</th></tr></thead>
+              <tbody id="cartMiniBody"><tr><td colspan="4" style="text-align:center;color:var(--argon-muted);">Chưa có sản phẩm</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 3. LOGO & WATERMARK -->
+        <div class="argon-card">
+          <div class="argon-card-header"><div class="argon-card-title">🎨 3. Logo & Watermark</div></div>
+          <div class="row">
+            <div class="form-group col"><label>Logo Công ty</label><input type="file" accept="image/png, image/jpeg" onchange="loadLogo(this)"></div>
+            <div class="form-group col">
+              <label>Watermark chìm</label>
+              <input type="file" accept="image/png, image/jpeg" onchange="loadWatermark(this)">
+              <button onclick="xoaWatermark()" id="btnXoaWm" style="display:none;margin-top:5px;background:var(--argon-danger);color:#fff;border:none;padding:4px 8px;border-radius:4px;font-size:10px;">Xóa</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. CẤU HÌNH GỬI MAIL -->
+        <div class="argon-card" style="border:1.5px solid var(--argon-primary);">
+          <div class="argon-card-header">
+            <div class="argon-card-title" style="color:var(--argon-primary);">📧 4. Cấu Hình Gửi Mail Khách Hàng</div>
+            <button class="btn-mini-save" onclick="datLaiNoiDungMacDinh()">🔄 Tạo mẫu</button>
+          </div>
+          <div class="form-group"><label>Email khách hàng nhận file PDF</label><input type="text" id="inEmailKhach" placeholder="VD: contact@customer.com"></div>
+          <div class="form-group"><label>Thông tin liên hệ của bạn (Hiển thị trong email)</label><input type="text" id="inThongTinLienHeMail" placeholder="VD: Mr. Minh - SĐT/Zalo: 0909.xxx.xxx" oninput="capNhatLienHeVaoA4()"></div>
+          <div class="form-group"><label>Tiêu đề thư (Subject)</label><input type="text" id="inEmailSubject" placeholder="Tiêu đề email..."></div>
+          <div class="form-group"><label>Nội dung lời nhắn</label><textarea id="inEmailBody" rows="4" placeholder="Nội dung email..."></textarea></div>
+        </div>
+
+        <!-- THAO TÁC HỆ THỐNG -->
+        <div class="argon-card" style="background:#f1f5f9;">
+          <div class="argon-card-header"><div class="argon-card-title">⚡ Thao Tác Hệ Thống</div></div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div class="row">
+              <button class="btn-argon btn-neutral-argon" onclick="luuDonNháp()">💾 Lưu Nháp</button>
+              <button class="btn-argon btn-success-argon" onclick="luuVaoAppSheet()">☁️ Lưu Cloud</button>
+            </div>
+            <div class="row">
+              <button class="btn-argon btn-primary-argon" onclick="xuatPDF()" style="flex:1;">🖨️ Tải PDF</button>
+              <button class="btn-argon" onclick="guiEmailChoKhachHang()" style="flex:1;background:linear-gradient(87deg,#fb6340 0,#fbb140 100%);color:#fff;">📧 Gửi Mail</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CỘT PHẢI: XEM TRƯỚC TỜ A4 -->
+    <div class="panel-right" id="panelRightScroll">
+      <div class="preview-toolbar">
+        <div class="toolbar-item">
+          <span>✨ Mẫu:</span>
+          <select id="pdfThemeSelect" onchange="doiGiaoDienPDF(this.value)" style="width:auto;padding:4px 8px;font-weight:700;">
+            <option value="theme-executive">💎 Executive</option>
+            <option value="theme-dark-banner">🔥 Modern Dark</option>
+            <option value="theme-split-pro">⚡ Split Bold</option>
+            <option value="theme-luxury-grid">👑 Luxury Grid</option>
+            <option value="theme-minimal">🌿 Minimalist</option>
+            <option value="theme-classic">🏛️ Classic Box</option>
+          </select>
+        </div>
+        <div class="toolbar-item">
+          <span>🔍 Zoom:</span>
+          <select onchange="doiTyLeZoom(this.value)" style="width:auto;padding:4px 8px;font-weight:700;">
+            <option value="1">100%</option><option value="0.85">85%</option><option value="0.5">50% (Mobile)</option>
+          </select>
+        </div>
+        <div class="toolbar-item" style="display:flex;align-items:center;gap:4px;">
+          <input type="color" id="liveColorPicker" value="#007a3d" oninput="dongBoMauTuPicker(this.value)" class="color-dot" title="Chọn màu trực quan">
+          <input type="text" id="liveColorHex" value="#007A3D" maxlength="7" placeholder="#000000" oninput="dongBoMauTuText(this.value)" style="width:68px;padding:3px 5px;font-size:11px;font-weight:700;font-family:monospace;text-transform:uppercase;border:1px solid #cbd5e1;border-radius:4px;text-align:center;">
+        </div>
+        <button onclick="xuatPDF()" style="background:var(--argon-primary);color:#fff;border:none;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;">🖨️ Tải PDF</button>
+      </div>
+
+      <div class="a4-wrapper" id="a4Wrapper">
+        <div class="a4-paper theme-executive" id="a4Paper">
+          <div class="a4-top-accent"></div>
+          <div class="watermark-overlay"><img id="watermarkImg" src="" alt="Watermark"></div>
+
+          <div class="a4-content-body">
+            <div class="header-top">
+              <div><img id="sysLogo" src="" alt="Logo" class="company-logo"></div>
+              <div class="company-info">
+                <div class="company-name" id="sysTen">CÔNG TY CỔ PHẦN GOODS LINK</div>
+                <div class="company-desc"><span id="sysDiaChi"></span><br><span id="sysLienHeCty"></span></div>
+              </div>
+            </div>
+
+            <div class="executive-banner">
+              <div class="client-card">
+                <div class="info-label" id="lblKhachTitle">KÍNH GỬI KHÁCH HÀNG:</div>
+                <div class="info-client-name" id="preKhach">...</div>
+                <div class="info-client-contact" id="boxClientTel" style="display:none;"><span id="lblTelPrefix" style="color:#475569;font-weight:700;">LIÊN HỆ: </span><span id="preLienHe"></span></div>
+                <div id="boxXkDetails" style="display:none;font-size:12px;margin-top:5px;">
+                  <div id="boxDiaDiemXK" style="display:none;"><b>Địa điểm xuất kho: </b><span id="preDiaDiemXK"></span></div>
+                  <div id="boxBienSoXe" style="display:none;"><b>Biển số xe: </b><span id="preBienSoXe"></span></div>
+                </div>
+                <div class="info-sub-greeting" id="preGreeting" style="display:none;">We are pleased to quote as follows:</div>
+              </div>
+
+              <div class="doc-badge-card">
+                <h1 class="doc-title" id="docTitleMain">BẢNG BÁO GIÁ</h1>
+                <table class="meta-table">
+                  <tr><td class="meta-label" id="lblMaType">Mã số:</td><td class="meta-value" id="preMa">QUO-2026-001</td></tr>
+                  <tr><td class="meta-label" id="lblNgayType">Ngày lập:</td><td class="meta-value" id="preNgay"></td></tr>
+                  <tr id="boxValidUntil" style="display:none;"><td class="meta-label">Valid until:</td><td class="meta-value" id="preValidUntil"></td></tr>
+                  <tr id="boxPreparedBy" style="display:none;"><td class="meta-label">Prepared by:</td><td class="meta-value" id="prePreparedBy"></td></tr>
+                </table>
+              </div>
+            </div>
+
+            <table class="modern-table"><thead><tr id="tableHeaderRow"></tr></thead><tbody id="preTable"></tbody></table>
+
+            <div class="amount-in-words-box" id="boxAmountInWords">
+              <span id="lblAmountInWordsPrefix" style="font-weight:800;color:var(--doc-primary);">Số tiền bằng chữ: </span>
+              <span id="preAmountInWords" style="font-weight:700;font-style:italic;"></span>
+            </div>
+
+            <!-- KHUNG CHÍNH: TERMS & NOTES, PAYMENT TERM, BANK INFO -->
+            <div class="terms-section" id="termsSectionBox" style="display:none;">
+              <div class="terms-block" id="boxNotesSection" style="display:none;"><div class="terms-title" id="lblNotesHeader">ĐIỀU KHOẢN & GHI CHÚ:</div><div class="terms-content" id="preDieuKhoan"></div></div>
+              <div class="terms-block" id="boxPaymentTermPre" style="display:none;"><div class="terms-title" id="lblPaymentHeader">PHƯƠNG THỨC THANH TOÁN:</div><div class="terms-content" id="prePaymentTerm"></div></div>
+              <div class="terms-block" id="boxBankInfoPre" style="display:none;border-top:1px dashed #cbd5e1;padding-top:8px;"><div class="terms-title">BANKING INFORMATION FOR T/T:</div><div class="terms-content" id="preBankInfo" style="font-weight:700;"></div></div>
+            </div>
+
+            <!-- CÂU NOTE LIÊN HỆ NẰM NGOÀI KHUNG -->
+            <div id="boxEnNotePre" style="display:none;margin-top:12px;font-size:11.5px;font-style:italic;color:#334155;line-height:1.5;"><span id="preEnNote"></span></div>
+
+            <div class="signatures-xk-container" id="sigXKContainer">
+              <div class="sig-col"><div class="sig-title-xk">Thủ Trưởng Đơn Vị</div><div class="sig-sub-xk">(Ký và ghi rõ họ tên)</div></div>
+              <div class="sig-col"><div class="sig-title-xk">Thủ Kho / Quản Đốc</div><div class="sig-sub-xk">(Ký và ghi rõ họ tên)</div></div>
+              <div class="sig-col"><div class="sig-title-xk">Người Giao Hàng</div><div class="sig-sub-xk">(Ký và ghi rõ họ tên)</div></div>
+              <div class="sig-col"><div class="sig-title-xk">Người Lập Phiếu</div><div class="sig-sub-xk">(Ký và ghi rõ họ tên)</div></div>
+              <div class="sig-col"><div class="sig-title-xk">Người Nhận Hàng</div><div class="sig-sub-xk">(Ký và ghi rõ họ tên)</div></div>
+            </div>
+
+            <div class="signatures-single-container" id="sigSingleContainer">
+              <div style="width:240px;">
+                <div class="sign-title" id="signTitleName">ĐẠI DIỆN CÔNG TY</div>
+                <div style="color:#475569;font-size:11px;margin-bottom:55px;font-style:italic;" id="signSubText">(Ký, đóng dấu & ghi rõ họ tên)</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- ĐÓNG #viewStudio -->
+
+  <!-- NAVIGATION MOBILE -->
+  <div class="mobile-bottom-nav">
+    <button class="mob-nav-btn active" id="mobBtnForm" onclick="chuyenTabMobile('FORM')">📝 1. Soạn Đơn</button>
+    <button class="mob-nav-btn" id="mobBtnPreview" onclick="chuyenTabMobile('PREVIEW')">📄 2. Xem A4 & Gửi Mail</button>
+  </div>
+
+  <div id="loading-overlay"><div class="spinner"></div><div class="loading-text">Đang xử lý...</div></div>
+  <div id="custom-toast"></div>
+
+  <?!= include('JS_Utils_Calc'); ?>
+  <?!= include('JS_State_CRUD'); ?>
+  <?!= include('JS_Render_PDF'); ?>
+</body>
+</html>
